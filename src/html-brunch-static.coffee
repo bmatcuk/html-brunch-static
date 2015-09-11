@@ -1,6 +1,8 @@
 class HtmlBrunchStatic
   constructor: (config) ->
     @processors = config?.processors or []
+    @defaultContext = config?.defaultContext
+    @partialsAndLayouts = config?.partialsAndLayouts or /(?:partial|layout)s?/
 
   handles: (filename) ->
     @getProcessor(filename) isnt null
@@ -23,13 +25,13 @@ class HtmlBrunchStatic
       filename.replace(new RegExp(path.extname(filename) + '$'), '.html')
 
   compile: (data, filename, callback) ->
-    if path.basename(filename)[0] is '_'
+    if anymatch @partialsAndLayouts, filename
       # don't output partials and layouts
       callback null, '', true
       return
 
     loader = new TemplateLoader
-    template = loader.load filename, data
+    template = loader.load filename, data, @defaultContext
     if template instanceof Error
       callback template
       return

@@ -2,7 +2,7 @@ class TemplateLoader
   constructor: ->
     @cache = {}
 
-  load: (filename, data) ->
+  load: (filename, data, defaultContext) ->
     return @cache[filename] if @cache[filename]
 
     # parse the front matter
@@ -11,6 +11,7 @@ class TemplateLoader
     return new Error("Could not parse #{filename}.") if context is false
 
     # pull out content and settings
+    context = _.merge {}, defaultContext, context if defaultContext
     template = context._content
     options = context._options
     delete context._content

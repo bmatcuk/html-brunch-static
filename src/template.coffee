@@ -13,10 +13,8 @@ class Template
   setContent: (template) ->
     @content = template
 
-    # merge context - poor man's extend...
-    context = JSON.parse JSON.stringify template.context
-    context[k] = v for own k, v of @context
-    @context = context
+    # merge context
+    @context = _.merge {}, template.context, @context
 
     # merge dependencies
     @dependencies = @dependencies.concat template.dependencies

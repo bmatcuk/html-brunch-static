@@ -1,4 +1,4 @@
-var anymatch, handlebars, path, yaml;
+var _, anymatch, handlebars, path, yaml;
 
 yaml = require('yaml-front-matter');
 
@@ -7,6 +7,10 @@ handlebars = require('handlebars');
 anymatch = require('anymatch');
 
 path = require('path');
+
+_ = {
+  merge: require('lodash.merge')
+};
 
 var Partial;
 
@@ -66,15 +70,14 @@ PassthruProcessor = {
   }
 };
 
-var Template,
-  hasProp = {}.hasOwnProperty;
+var Template;
 
 Template = (function() {
-  function Template(filename, template1, context1, options) {
+  function Template(filename, template1, context, options) {
     var ref, ref1;
     this.filename = filename;
     this.template = template1;
-    this.context = context1;
+    this.context = context;
     this.options = options;
     this.dependencies = [];
     if ((ref = this.options) != null ? ref.layout : void 0) {
@@ -92,16 +95,8 @@ Template = (function() {
   };
 
   Template.prototype.setContent = function(template) {
-    var context, k, ref, v;
     this.content = template;
-    context = JSON.parse(JSON.stringify(template.context));
-    ref = this.context;
-    for (k in ref) {
-      if (!hasProp.call(ref, k)) continue;
-      v = ref[k];
-      context[k] = v;
-    }
-    this.context = context;
+    this.context = _.merge({}, template.context, this.context);
     return this.dependencies = this.dependencies.concat(template.dependencies);
   };
 
@@ -191,7 +186,7 @@ TemplateLoader = (function() {
     this.cache = {};
   }
 
-  TemplateLoader.prototype.load = function(filename, data) {
+  TemplateLoader.prototype.load = function(filename, data, defaultContext) {
     var context, file, i, layout, len, options, partial, ref, template;
     if (this.cache[filename]) {
       return this.cache[filename];
@@ -202,6 +197,9 @@ TemplateLoader = (function() {
     }
     if (context === false) {
       return new Error("Could not parse " + filename + ".");
+    }
+    if (defaultContext) {
+      context = _.merge({}, defaultContext, context);
     }
     template = context._content;
     options = context._options;
@@ -272,6 +270,8 @@ var HtmlBrunchStatic;
 HtmlBrunchStatic = (function() {
   function HtmlBrunchStatic(config) {
     this.processors = (config != null ? config.processors : void 0) || [];
+    this.defaultContext = config != null ? config.defaultContext : void 0;
+    this.partialsAndLayouts = (config != null ? config.partialsAndLayouts : void 0) || /(?:partial|layout)s?/;
   }
 
   HtmlBrunchStatic.prototype.handles = function(filename) {
@@ -312,12 +312,12 @@ HtmlBrunchStatic = (function() {
 
   HtmlBrunchStatic.prototype.compile = function(data, filename, callback) {
     var loader, template;
-    if (path.basename(filename)[0] === '_') {
+    if (anymatch(this.partialsAndLayouts, filename)) {
       callback(null, '', true);
       return;
     }
     loader = new TemplateLoader;
-    template = loader.load(filename, data);
+    template = loader.load(filename, data, this.defaultContext);
     if (template instanceof Error) {
       callback(template);
       return;
