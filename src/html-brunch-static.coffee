@@ -2,7 +2,10 @@ class HtmlBrunchStatic
   constructor: (config) ->
     @processors = config?.processors or []
     @defaultContext = config?.defaultContext
-    @partialsAndLayouts = config?.partialsAndLayouts or /(?:partial|layout)s?/
+    @partials = config?.partials or /partials?/
+    @layouts = config?.layouts or /layouts?/
+    if config?.hbsFiles
+      @processors.push new HandlebarsBrunchStatic config.hbsFiles
 
   handles: (filename) ->
     @getProcessor(filename) isnt null
@@ -25,9 +28,9 @@ class HtmlBrunchStatic
       filename.replace(new RegExp(path.extname(filename) + '$'), '.html')
 
   compile: (data, filename, callback) ->
-    if anymatch @partialsAndLayouts, filename
+    if anymatch(@partials, filename) or anymatch(@layouts, filename)
       # don't output partials and layouts
-      callback null, '', true
+      do callback
       return
 
     loader = new TemplateLoader
@@ -35,12 +38,15 @@ class HtmlBrunchStatic
     if template instanceof Error
       callback template
       return
-    template.compile @, (err, content) ->
+    template.compile @, (err, content) =>
       if err
         callback err
         return
 
-      callback null, content, template.dependencies
+      result =
+        filename: @transformPath filename
+        content: content
+      callback null, [result], template.dependencies
 
 module.exports = (config) -> new HtmlBrunchStatic config
 

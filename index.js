@@ -12,6 +12,25 @@ _ = {
   merge: require('lodash.merge')
 };
 
+var HandlebarsBrunchStatic;
+
+HandlebarsBrunchStatic = (function() {
+  function HandlebarsBrunchStatic() {}
+
+  HandlebarsBrunchStatic.prototype.handles = /\.static\.(?:hbs|handlebars)$/;
+
+  HandlebarsBrunchStatic.prototype.transformPath = function(filename) {
+    return filename.replace(/\.static\.\w+$/, '.html');
+  };
+
+  HandlebarsBrunchStatic.prototype.compile = function(data, filename, callback) {
+    return callback(null, data);
+  };
+
+  return HandlebarsBrunchStatic;
+
+})();
+
 var Partial;
 
 Partial = (function() {
@@ -271,7 +290,11 @@ HtmlBrunchStatic = (function() {
   function HtmlBrunchStatic(config) {
     this.processors = (config != null ? config.processors : void 0) || [];
     this.defaultContext = config != null ? config.defaultContext : void 0;
-    this.partialsAndLayouts = (config != null ? config.partialsAndLayouts : void 0) || /(?:partial|layout)s?/;
+    this.partials = (config != null ? config.partials : void 0) || /partials?/;
+    this.layouts = (config != null ? config.layouts : void 0) || /layouts?/;
+    if (config != null ? config.hbsFiles : void 0) {
+      this.processors.push(new HandlebarsBrunchStatic(config.hbsFiles));
+    }
   }
 
   HtmlBrunchStatic.prototype.handles = function(filename) {
@@ -312,8 +335,8 @@ HtmlBrunchStatic = (function() {
 
   HtmlBrunchStatic.prototype.compile = function(data, filename, callback) {
     var loader, template;
-    if (anymatch(this.partialsAndLayouts, filename)) {
-      callback(null, '', true);
+    if (anymatch(this.partials, filename) || anymatch(this.layouts, filename)) {
+      callback();
       return;
     }
     loader = new TemplateLoader;
@@ -322,13 +345,20 @@ HtmlBrunchStatic = (function() {
       callback(template);
       return;
     }
-    return template.compile(this, function(err, content) {
-      if (err) {
-        callback(err);
-        return;
-      }
-      return callback(null, content, template.dependencies);
-    });
+    return template.compile(this, (function(_this) {
+      return function(err, content) {
+        var result;
+        if (err) {
+          callback(err);
+          return;
+        }
+        result = {
+          filename: _this.transformPath(filename),
+          content: content
+        };
+        return callback(null, [result], template.dependencies);
+      };
+    })(this));
   };
 
   return HtmlBrunchStatic;
