@@ -4,8 +4,10 @@ class HtmlBrunchStatic
     @defaultContext = config?.defaultContext
     @partials = config?.partials or /partials?/
     @layouts = config?.layouts or /layouts?/
-    if config?.hbsFiles
-      @processors.push new HandlebarsBrunchStatic config.hbsFiles
+    @handlebarsOptions = config?.handlebars
+    if @handlebarsOptions?.enableProcessor
+      @processors.push new HandlebarsBrunchStatic @handlebarsOptions.enableProcessor
+      delete @handlebarsOptions.enableProcessor
 
   handles: (filename) ->
     @getProcessor(filename) isnt null

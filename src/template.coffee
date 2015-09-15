@@ -4,6 +4,7 @@ class Template
     @dependencies.push @options.layout if @options?.layout
     @dependencies = @dependencies.concat @options.partials if @options?.partials
     @partials = []
+    @partialsCompiled = false
 
   addPartial: (partial) ->
     @partials.push partial
@@ -20,17 +21,25 @@ class Template
     @dependencies = @dependencies.concat template.dependencies
 
   compilePartials: (htmlBrunchStatic, hbs, callback) ->
-    if @partials.length > 0
-      count = @patials.length
-      done = (err, content) ->
-        if err
-          count = -1
-          callback err
-        return if count < 0
-        do callback if --count is 0
-      partial.compile htmlBrunchStatic, hbs, done for partial in @partials
-    else
+    if @partialsCompiled or @partials.length is 0
       do callback
+      return
+
+    count = @patials.length
+    done = (err, content, dependencies) =>
+      if err
+        count = -1
+        callback err
+      return if count < 0
+
+      # partial's compiler may add some dependencies
+      if dependencies and dependencies.constructor is Array
+        @dependencies = @dependencies.concat dependencies
+
+      if --count is 0
+        @partialsCompiled = true
+        do callback
+    partial.compile htmlBrunchStatic, hbs, done for partial in @partials
 
   compile: (htmlBrunchStatic, callback) ->
     hbs = do handlebars.create
@@ -42,7 +51,7 @@ class Template
 
         processor = htmlBrunchStatic.getProcessor @filename
         processor = PassthruProcessor unless processor
-        processor.compile @template, @filename, (err, content, dependencies) =>
+        processor.compile @template, @filename, @options, (err, content, dependencies) =>
           if err
             callback err
             return
@@ -52,7 +61,8 @@ class Template
             @dependencies = @dependencies.concat dependencies
 
           # process through handlebars
-          template = hbs.compile content, @options?.handlebars
+          hbsOptions = _.merge {}, htmlBrunchStatic.handlebarsOptions, @options?.handlebars
+          template = hbs.compile content, hbsOptions
           result = template @context
           callback null, result
 

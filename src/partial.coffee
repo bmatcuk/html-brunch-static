@@ -1,6 +1,7 @@
 class Partial
   constructor: (@filename, @template, @context, @options) ->
     @dependencies = @options?.partials or []
+    @compilerDependencies = null
     @partials = []
 
   addPartial: (partial) ->
@@ -12,21 +13,18 @@ class Partial
 
   compile: (htmlBrunchStatic, hbs, callback) ->
     if @compiledTemplate
-      callback null, @compiledTemplate
+      callback null, @compiledTemplate, @compilerDependencies
       return
 
     processor = htmlBrunchStatic.getProcessor @filename
     processor = PassthruProcessor unless processor
-    processor.compile @template, @filename, (err, content, dependencies) ->
+    processor.compile @template, @filename, @options, (err, content, dependencies) ->
       if err
         callback err
         return
 
-      # compiler may add dependencies
-      if dependencies and dependencies.constructor is Array
-        @dependencies = @dependencies.concat dependencies
-
       @compiledTemplate = content
+      @compilerDependencies = dependencies
       hbs.registerPartial @templateName(), content
-      callback null, content
+      callback null, content, dependencies
 

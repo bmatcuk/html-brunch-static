@@ -3,11 +3,13 @@ Transform static html files in brunch.
 
 html-brunch-static is a processor for [brunch-static](https://github.com/bmatcuk/brunch-static), a [brunch](http://brunch.io/) plugin designed to handle static files. html-brunch-static can convert a variety of template languages into static html files with support for layouts and partial views.
 
+If you want to dive into writing your own processor, [jump down](#writing-html-brunch-static-processors). Otherwise, keep reading.
+
 ## Installation
 html-brunch-static depends on [brunch-static](https://github.com/bmatcuk/brunch-static), so, you will need to install both plugins. The recommended method is via npm:
 
 ```bash
-npm install --save brunch-static html-brunch-static
+npm install --save-dev brunch-static html-brunch-static
 ```
 
 Or manually:
@@ -33,7 +35,10 @@ exports.config =
           defaultContext: { ... }
           partials: ...
           layouts: ...
-          hbsFiles: ...
+          handlebars: {
+            enableProcessor: ...
+            ...
+          }
         }
       ]
 ```
@@ -50,8 +55,11 @@ exports.config =
 * **layouts** _(default: /layouts?/)_
   > Like _partials_ above, _layouts_ is an [anymatch](https://github.com/es128/anymatch) that will be used to determine what files are [layouts](#layouts). It may also be a string with globs, a regex, or a function that takes a filename and returns true/false. The default setting will match any filename that includes the word "layout" (or "layouts") anywhere in the path, for example: `app/layouts/whatever.ext`.
 
-* **hbsFiles** _(default: false)_
-  > If true, enables the built-in support for handlebar files.
+* **handlebars** _(default: null)_
+  > Default options for handlebars (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)). These options, with the exception of _enableProcessor_ (see below), are passed verbatim to handlebars and can be overridden in the front matter ([see below](#context-layouts-and-partials)).
+  >
+  > * **enableProcessor** _(default: false)_
+  >   > _enableProcessor_ may either be true or an [anymatch](https://github.com/es128/anymatch): a string with globs, a regex, or a function that takes a filename and returns true or false. Either way, it enables the built-in support for handlebar files. The anymatch will determine what files are handled by the built-in processor. If you pass true instead of an anymatch, the default will match files ending in `.static.hbs` or `.static.handlebars`.
 
 The value of _partials_ and _layouts_ may be the same if you want to put them all together. In a lot of similar static site generators, partials and layouts might start with an underscore, such as `_layout.html`. You can do this (and set _partials_ and _layouts_ to something like `"**/_*"`), but be aware that, by default, brunch will ignore any files that start with an underscore. What this means is that any changes to these files will not trigger brunch to recompile any files that are dependent on those partials and layouts. This problem can be fixed if you change brunch's `conventions.ignored` setting to not ignore files that begin with an underscore.
 
@@ -60,7 +68,7 @@ Below are the currently available processors for html-brunch-static. If you'd li
 
 * Markdown: [marked-brunch-static](https://github.com/bmatcuk/marked-brunch-static)
 * Jade: [jade-brunch-static](https://github.com/bmatcuk/jade-brunch-static)
-* Handlebars: built-in (see the [hbsFiles option](#configuration) above.
+* Handlebars: built-in (see the [handlebars.enableProcessor option](#configuration) above)
 
 ## Context, Layouts, and Partials
 html-brunch-static has full support for using layouts and partials in your templates. In fact, you can have multiple levels of layouts if you'd like. These features are orchestrated by including [YAML](http://yaml.org/) or JSON _front matter_ at the top of your template files. Front matter sets the _context_ of the file, which is bubbled up (and possibily overridden) by the layout, and the layout's layout, etc. For example:
@@ -116,6 +124,8 @@ Alright, let's take a quick look at our `package.json`:
     "brunch": "x.y.z",
     "brunch-static": "x.y.z",
     "html-brunch-static": "x.y.z",
+    "marked-brunch-static": "x.y.z",
+    "jade-brunch-static": "x.y.z",
     ...
   },
   ...
@@ -155,4 +165,56 @@ Now if we run `brunch build`, we should get our output `public/index.html`:
   </body>
 </html>
 ```
+
+As touched on above, the front matter can contain some options. The following options are available. Note that some processors may define some additional options.
+
+```yaml
+---
+_options:
+  layout: ...
+  partials:
+    ...
+  handlebars:
+    ...
+---
+```
+
+* **layout**
+  > _layout_ is the layout file you want to use for this file. See above.
+
+* **partials**
+  > _partials_ is a list of partials that you want to use in this file. They must be declared here so that html-brunch-static knows to load them. See above.
+
+* **handlebars**
+  > _handlebars_ overrides the [handlebars](#configuration) option in the `brunch-config.coffee` file. These options are passed verbatim to handlebars (see the [handlebars.js documentation](http://handlebarsjs.com/reference.html)).
+
+## Writing html-brunch-static Processors
+Processors are kind of similar to Brunch plugins themselves: an object that has certain members and methods. It's recommended that your project follows the following naming scheme: `whatever-brunch-static` to make it easy to find in npm.
+
+```javascript
+var MyHtmlProcessor = function(config) { ... };
+
+MyHtmlProcessor.prototype = {
+  handles: ...,
+  transformPath: function(filename) { ... },
+  compile: function(data, filename, options, callback) { ... }
+};
+
+// export a simple function to make it easier to include in brunch-config.coffee
+module.exports = function(config) { return new MyHtmlProcessor(config); };
+```
+
+* **handles**
+  > _handles_ is an [anymatch](https://github.com/es128/anymatch) that will be used to determine if your processor can handle a given file. This means it can be either be a string (using globs), a regex, or a function that takes a single parameter (the filename) and returns true if your processor can handle it, or false otherwise.
+
+* **transformPath**
+  > _transformPath_ is a function that will receive the original filename and return the filename for the output. In most cases, this just involves replacing the file extension with html. For example, the input filename might be something like `app/path/to/file.static.jade`. This function would return `app/path/to/file.html`.
+
+* **compile**
+  > _compile_ receives the contents of the file, the file's name, options, and a callback function. The options come straight from the file's front matter (see toward the end of [Context, Layouts, and Partials](#context-layouts-and-partials)), so, be aware that they might be null (if the user didn't set any options), or the values you're looking for might not have been set at all! After you have finished processing the file's data, you will need to call the callback function with the following:
+  >
+  > * `callback(err, data, dependencies)`
+  >   * **err** informs html-brunch-static when something goes wrong. If there were no issues, pass null.
+  >   * **data** is the html output of your processor.
+  >   * **dependencies** is an array of dependencies that your processor has found for the file. html-brunch-static already figures out dependencies for layouts and partial views, but the language you are implementing might have some way of its own to include the content of other files. If this is the case, you should return those dependencies here. Otherwise, you can just pass null.
 

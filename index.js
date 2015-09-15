@@ -15,7 +15,11 @@ _ = {
 var HandlebarsBrunchStatic;
 
 HandlebarsBrunchStatic = (function() {
-  function HandlebarsBrunchStatic() {}
+  function HandlebarsBrunchStatic(config) {
+    if (config.constructor !== Boolean) {
+      this.handles = config;
+    }
+  }
 
   HandlebarsBrunchStatic.prototype.handles = /\.static\.(?:hbs|handlebars)$/;
 
@@ -23,7 +27,7 @@ HandlebarsBrunchStatic = (function() {
     return filename.replace(/\.static\.\w+$/, '.html');
   };
 
-  HandlebarsBrunchStatic.prototype.compile = function(data, filename, callback) {
+  HandlebarsBrunchStatic.prototype.compile = function(data, filename, options, callback) {
     return callback(null, data);
   };
 
@@ -41,6 +45,7 @@ Partial = (function() {
     this.context = context;
     this.options = options;
     this.dependencies = ((ref = this.options) != null ? ref.partials : void 0) || [];
+    this.compilerDependencies = null;
     this.partials = [];
   }
 
@@ -56,24 +61,22 @@ Partial = (function() {
   Partial.prototype.compile = function(htmlBrunchStatic, hbs, callback) {
     var processor;
     if (this.compiledTemplate) {
-      callback(null, this.compiledTemplate);
+      callback(null, this.compiledTemplate, this.compilerDependencies);
       return;
     }
     processor = htmlBrunchStatic.getProcessor(this.filename);
     if (!processor) {
       processor = PassthruProcessor;
     }
-    return processor.compile(this.template, this.filename, function(err, content, dependencies) {
+    return processor.compile(this.template, this.filename, this.options, function(err, content, dependencies) {
       if (err) {
         callback(err);
         return;
       }
-      if (dependencies && dependencies.constructor === Array) {
-        this.dependencies = this.dependencies.concat(dependencies);
-      }
       this.compiledTemplate = content;
+      this.compilerDependencies = dependencies;
       hbs.registerPartial(this.templateName(), content);
-      return callback(null, content);
+      return callback(null, content, dependencies);
     });
   };
 
@@ -106,6 +109,7 @@ Template = (function() {
       this.dependencies = this.dependencies.concat(this.options.partials);
     }
     this.partials = [];
+    this.partialsCompiled = false;
   }
 
   Template.prototype.addPartial = function(partial) {
@@ -121,9 +125,13 @@ Template = (function() {
 
   Template.prototype.compilePartials = function(htmlBrunchStatic, hbs, callback) {
     var count, done, i, len, partial, ref, results;
-    if (this.partials.length > 0) {
-      count = this.patials.length;
-      done = function(err, content) {
+    if (this.partialsCompiled || this.partials.length === 0) {
+      callback();
+      return;
+    }
+    count = this.patials.length;
+    done = (function(_this) {
+      return function(err, content, dependencies) {
         if (err) {
           count = -1;
           callback(err);
@@ -131,20 +139,22 @@ Template = (function() {
         if (count < 0) {
           return;
         }
+        if (dependencies && dependencies.constructor === Array) {
+          _this.dependencies = _this.dependencies.concat(dependencies);
+        }
         if (--count === 0) {
+          _this.partialsCompiled = true;
           return callback();
         }
       };
-      ref = this.partials;
-      results = [];
-      for (i = 0, len = ref.length; i < len; i++) {
-        partial = ref[i];
-        results.push(partial.compile(htmlBrunchStatic, hbs, done));
-      }
-      return results;
-    } else {
-      return callback();
+    })(this);
+    ref = this.partials;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      partial = ref[i];
+      results.push(partial.compile(htmlBrunchStatic, hbs, done));
     }
+    return results;
   };
 
   Template.prototype.compile = function(htmlBrunchStatic, callback) {
@@ -162,8 +172,8 @@ Template = (function() {
           if (!processor) {
             processor = PassthruProcessor;
           }
-          return processor.compile(_this.template, _this.filename, function(err, content, dependencies) {
-            var ref, result, template;
+          return processor.compile(_this.template, _this.filename, _this.options, function(err, content, dependencies) {
+            var hbsOptions, ref, result, template;
             if (err) {
               callback(err);
               return;
@@ -171,7 +181,8 @@ Template = (function() {
             if (dependencies && dependencies.constructor === Array) {
               _this.dependencies = _this.dependencies.concat(dependencies);
             }
-            template = hbs.compile(content, (ref = _this.options) != null ? ref.handlebars : void 0);
+            hbsOptions = _.merge({}, htmlBrunchStatic.handlebarsOptions, (ref = _this.options) != null ? ref.handlebars : void 0);
+            template = hbs.compile(content, hbsOptions);
             result = template(_this.context);
             return callback(null, result);
           });
@@ -288,12 +299,15 @@ var HtmlBrunchStatic;
 
 HtmlBrunchStatic = (function() {
   function HtmlBrunchStatic(config) {
+    var ref;
     this.processors = (config != null ? config.processors : void 0) || [];
     this.defaultContext = config != null ? config.defaultContext : void 0;
     this.partials = (config != null ? config.partials : void 0) || /partials?/;
     this.layouts = (config != null ? config.layouts : void 0) || /layouts?/;
-    if (config != null ? config.hbsFiles : void 0) {
-      this.processors.push(new HandlebarsBrunchStatic(config.hbsFiles));
+    this.handlebarsOptions = config != null ? config.handlebars : void 0;
+    if ((ref = this.handlebarsOptions) != null ? ref.enableProcessor : void 0) {
+      this.processors.push(new HandlebarsBrunchStatic(this.handlebarsOptions.enableProcessor));
+      delete this.handlebarsOptions.enableProcessor;
     }
   }
 
