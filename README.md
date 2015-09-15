@@ -71,8 +71,9 @@ Below are the currently available processors for html-brunch-static. If you'd li
 * Handlebars: built-in (see the [handlebars.enableProcessor option](#configuration) above)
 
 ## Context, Layouts, and Partials
-html-brunch-static has full support for using layouts and partials in your templates. In fact, you can have multiple levels of layouts if you'd like. These features are orchestrated by including [YAML](http://yaml.org/) or JSON _front matter_ at the top of your template files. Front matter sets the _context_ of the file, which is bubbled up (and possibily overridden) by the layout, and the layout's layout, etc. For example:
+html-brunch-static has full support for using layouts and partials in your templates. In fact, you can have multiple levels of layouts if you'd like. These features are orchestrated by including [YAML](http://yaml.org/) or JSON _front matter_ at the top of your template files. Front matter sets the _context_ of the file, which is bubbled up (and possibily overridden) by the layout, and the layout's layout, etc.
 
+### Example
 Let's say I have the following file `app/index.md`:
 
 ```markdown
@@ -166,6 +167,7 @@ Now if we run `brunch build`, we should get our output `public/index.html`:
 </html>
 ```
 
+### Front Matter Options
 As touched on above, the front matter can contain some options. The following options are available. Note that some processors may define some additional options.
 
 ```yaml
@@ -211,10 +213,10 @@ module.exports = function(config) { return new MyHtmlProcessor(config); };
   > _transformPath_ is a function that will receive the original filename and return the filename for the output. In most cases, this just involves replacing the file extension with html. For example, the input filename might be something like `app/path/to/file.static.jade`. This function would return `app/path/to/file.html`.
 
 * **compile**
-  > _compile_ receives the contents of the file, the file's name, options, and a callback function. The options come straight from the file's front matter (see toward the end of [Context, Layouts, and Partials](#context-layouts-and-partials)), so, be aware that they might be null (if the user didn't set any options), or the values you're looking for might not have been set at all! After you have finished processing the file's data, you will need to call the callback function with the following:
+  > _compile_ receives the contents of the file, the file's name, options, and a callback function. The options come straight from the file's front matter (see [Front Matter Options](#front-matter-options)), so, be aware that they might be null (if the user didn't set any options), or the values you're looking for might not have been set at all! After you have finished processing the file's data, you will need to call the callback function with the following:
   >
   > * `callback(err, data, dependencies)`
   >   * **err** informs html-brunch-static when something goes wrong. If there were no issues, pass null.
   >   * **data** is the html output of your processor.
-  >   * **dependencies** is an array of dependencies that your processor has found for the file. html-brunch-static already figures out dependencies for layouts and partial views, but the language you are implementing might have some way of its own to include the content of other files. If this is the case, you should return those dependencies here. Otherwise, you can just pass null.
+  >   * **dependencies** is an array of dependencies that your processor has found for the file. If the file has dependencies on layouts and partial views, html-brunch-static already tracks those, but the language you are implementing in your processor might have some way of its own to include the content of other files. If this is the case, you should return those dependencies here so html-brunch-static can track them, too. Otherwise, you can just pass null.
 
