@@ -68,16 +68,18 @@ Partial = (function() {
     if (!processor) {
       processor = PassthruProcessor;
     }
-    return processor.compile(this.template, this.filename, this.options, function(err, content, dependencies) {
-      if (err) {
-        callback(err);
-        return;
-      }
-      this.compiledTemplate = content;
-      this.compilerDependencies = dependencies;
-      hbs.registerPartial(this.templateName(), content);
-      return callback(null, content, dependencies);
-    });
+    return processor.compile(this.template, this.filename, this.options, (function(_this) {
+      return function(err, content, dependencies) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        _this.compiledTemplate = content;
+        _this.compilerDependencies = dependencies;
+        hbs.registerPartial(_this.templateName(), content);
+        return callback(null, content, dependencies);
+      };
+    })(this));
   };
 
   return Partial;
@@ -87,7 +89,7 @@ Partial = (function() {
 var PassthruProcessor;
 
 PassthruProcessor = {
-  compile: function(data, filename, callback) {
+  compile: function(data, filename, options, callback) {
     return callback(null, data);
   }
 };
@@ -129,7 +131,7 @@ Template = (function() {
       callback();
       return;
     }
-    count = this.patials.length;
+    count = this.partials.length;
     done = (function(_this) {
       return function(err, content, dependencies) {
         if (err) {

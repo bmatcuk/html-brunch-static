@@ -82,7 +82,7 @@ title: html-brunch-static's awesome test page
 _options:
   layout: app/layouts/main.jade
   partials:
-    app/partials/greetings.html
+    - app/partials/greetings.html
 ---
 {{>greetings}}
 

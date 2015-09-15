@@ -18,7 +18,7 @@ class Partial
 
     processor = htmlBrunchStatic.getProcessor @filename
     processor = PassthruProcessor unless processor
-    processor.compile @template, @filename, @options, (err, content, dependencies) ->
+    processor.compile @template, @filename, @options, (err, content, dependencies) =>
       if err
         callback err
         return

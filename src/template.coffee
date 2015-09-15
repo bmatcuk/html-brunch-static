@@ -25,7 +25,7 @@ class Template
       do callback
       return
 
-    count = @patials.length
+    count = @partials.length
     done = (err, content, dependencies) =>
       if err
         count = -1

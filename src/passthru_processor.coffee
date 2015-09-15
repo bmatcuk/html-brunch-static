@@ -1,4 +1,4 @@
 PassthruProcessor =
-  compile: (data, filename, callback) ->
+  compile: (data, filename, options, callback) ->
     callback null, data
 
