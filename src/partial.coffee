@@ -13,18 +13,22 @@ class Partial
 
   compile: (htmlBrunchStatic, hbs, callback) ->
     if @compiledTemplate
+      hbs.registerPartial @templateName(), @compiledTemplate
       callback null, @compiledTemplate, @compilerDependencies
       return
 
     processor = htmlBrunchStatic.getProcessor @filename
     processor = PassthruProcessor unless processor
-    processor.compile @template, @filename, @options, (err, content, dependencies) =>
-      if err
-        callback err
-        return
+    try
+      processor.compile @template, @filename, @options, (err, content, dependencies) =>
+        if err
+          callback err
+          return
 
-      @compiledTemplate = content
-      @compilerDependencies = dependencies
-      hbs.registerPartial @templateName(), content
-      callback null, content, dependencies
+        @compiledTemplate = content
+        @compilerDependencies = dependencies
+        hbs.registerPartial @templateName(), content
+        callback null, content, dependencies
+    catch err
+      callback err
 

@@ -40,15 +40,18 @@ class HtmlBrunchStatic
     if template instanceof Error
       callback template
       return
-    template.compile @, (err, content) =>
-      if err
-        callback err
-        return
+    try
+      template.compile @, (err, content) =>
+        if err
+          callback err
+          return
 
-      result =
-        filename: @transformPath filename
-        content: content
-      callback null, [result], template.dependencies
+        result =
+          filename: @transformPath filename
+          content: content
+        callback null, [result], template.dependencies
+    catch err
+      callback err
 
 module.exports = (config) -> new HtmlBrunchStatic config
 
