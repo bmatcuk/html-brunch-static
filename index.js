@@ -17,7 +17,16 @@ var HandlebarsBrunchStatic;
 HandlebarsBrunchStatic = (function() {
   function HandlebarsBrunchStatic(config) {
     if (config.constructor !== Boolean) {
-      this.handles = config;
+      if (config.constructor === Object) {
+        if (config.fileMatch) {
+          this.handles = config.fileMatch;
+        }
+        if (config.fileTransform) {
+          this.transformPath = config.fileTransform;
+        }
+      } else {
+        this.handles = config;
+      }
     }
   }
 
