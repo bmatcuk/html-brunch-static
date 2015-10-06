@@ -61,19 +61,21 @@ exports.config =
   > Default options for handlebars (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)). These options, with the exception of _enableProcessor_ (see below), are passed verbatim to handlebars and can be overridden in the front matter ([see below](#context-layouts-and-partials)).
   >
   > * **enableProcessor** _(default: false)_
-  >   > _enableProcessor_ may either be true or an object containing objects to pass to the handlebars processor. Either way will enable the built-in support for handlebar files. The following options are available:
-  >   >
-  >   > ```coffee
-  >   > enableProcessor:
-  >   >   fileMatch: ...
-  >   >   fileTransform: ((filename) -> ...)
-  >   > ```
-  >   >
-  >   > * **fileMatch** _(default: `/\.static\.(hbs|handlebars)$/`)_
-  >   >   > _fileMatch_ is an [anymatch](https://github.com/es128/anymatch) that is used to determine which files will be handled by the handlebars processor. As an anymatch, it may be a string with globs, a regex, or a function that takes a filename and returns true or false. The default will match files that end with `.static.hbs` or `.static.handlebars`.
-  >   >
-  >   > * **fileTransform** _(default: `(f) -> f.replace(/\.static\.\w+$/, '.html')`)_
-  >   >   > _fileTransform_ converts the input filename into an html filename. It takes a filename as input and returns the new filename with the html extension. If you set the _fileMatch_ property above, you'll probably need to set this option as well to ensure that your output files end with the html extension.
+  >   > _enableProcessor_ may either be true or an object containing objects to pass to the handlebars processor. Either way will enable the built-in support for handlebar files. See below for the options available.
+
+The following options are available if you enable the built-in handlebars processor:
+
+```coffee
+enableProcessor:
+  fileMatch: ...
+  fileTransform: ((filename) -> ...)
+```
+
+* **fileMatch** _(default: `/\.static\.(hbs|handlebars)$/`)_
+  > _fileMatch_ is an [anymatch](https://github.com/es128/anymatch) that is used to determine which files will be handled by the handlebars processor. As an anymatch, it may be a string with globs, a regex, or a function that takes a filename and returns true or false. The default will match files that end with `.static.hbs` or `.static.handlebars`.
+
+* **fileTransform** _(default: `(f) -> f.replace(/\.static\.\w+$/, '.html')`)_
+  > _fileTransform_ converts the input filename into an html filename. It takes a filename as input and returns the new filename with the html extension. If you set the _fileMatch_ property above, you'll probably need to set this option as well to ensure that your output files end with the html extension.
 
 The value of _partials_ and _layouts_ may be the same if you want to put them all together. In a lot of similar static site generators, partials and layouts might start with an underscore, such as `_layout.html`. You can do this (and set _partials_ and _layouts_ to something like `"**/_*"`), but be aware that, by default, brunch will ignore any files that start with an underscore. What this means is that any changes to these files will not trigger brunch to recompile any files that are dependent on those partials and layouts. This problem can be fixed if you change brunch's `conventions.ignored` setting to not ignore files that begin with an underscore.
 
