@@ -45,22 +45,23 @@ exports.config =
       ]
 ```
 
-* **processors** _(default: [])_
+* **processors** _(default: `[]`)_
   > _processors_ is an array of html processors. See [available processors](#available-processors) below for a list.
 
-* **defaultContext** _(default: {})_
+* **defaultContext** _(default: `{}`)_
   > To set default values for the _context_ of your files, use _defaultContext_. See "[Context, Layouts, and Partials](#context-layouts-and-partials)" below for more details on the context.
 
-* **partials** _(default: /partials?/)_
+* **partials** _(default: `/partials?/`)_
   > _partials_ is an [anymatch](https://github.com/es128/anymatch) that will be used to determine what files are [partials](#partials). This means it can be either a string with globs, a regex, or a function that takes a single parameter (a filename) and returns true if it is a partial view and false otherwise. The default setting will match any filename that includes the word "partial" (or "partials") anywhere in the path, for example: `app/partials/whatever.ext`.
 
-* **layouts** _(default: /layouts?/)_
+* **layouts** _(default: `/layouts?/`)_
   > Like _partials_ above, _layouts_ is an [anymatch](https://github.com/es128/anymatch) that will be used to determine what files are [layouts](#layouts). It may also be a string with globs, a regex, or a function that takes a filename and returns true/false. The default setting will match any filename that includes the word "layout" (or "layouts") anywhere in the path, for example: `app/layouts/whatever.ext`.
 
-* **handlebars** _(default: null)_
+* **handlebars** _(default: `null`)_
   > Default options for handlebars (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)). These options, with the exception of _enableProcessor_ (see below), are passed verbatim to handlebars and can be overridden in the front matter ([see below](#context-layouts-and-partials)).
   >
-  > * **enableProcessor** _(default: false)_
+  > * **enableProcessor** _(default: `false`)_
+  >
   >   > _enableProcessor_ may either be true or an object containing objects to pass to the handlebars processor. Either way will enable the built-in support for handlebar files. See below for the options available.
 
 The following options are available if you enable the built-in handlebars processor:
@@ -77,6 +78,7 @@ enableProcessor:
 * **fileTransform** _(default: `(f) -> f.replace(/\.static\.\w+$/, '.html')`)_
   > _fileTransform_ converts the input filename into an html filename. It takes a filename as input and returns the new filename with the html extension. If you set the _fileMatch_ property above, you'll probably need to set this option as well to ensure that your output files end with the html extension.
 
+### Note
 The value of _partials_ and _layouts_ may be the same if you want to put them all together. In a lot of similar static site generators, partials and layouts might start with an underscore, such as `_layout.html`. You can do this (and set _partials_ and _layouts_ to something like `"**/_*"`), but be aware that, by default, brunch will ignore any files that start with an underscore. What this means is that any changes to these files will not trigger brunch to recompile any files that are dependent on those partials and layouts. This problem can be fixed if you change brunch's `conventions.ignored` setting to not ignore files that begin with an underscore.
 
 ## Available Processors
