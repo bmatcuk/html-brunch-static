@@ -1,7 +1,14 @@
 class HandlebarsBrunchStatic
   constructor: (config) ->
     unless config.constructor is Boolean
-      @handles = config
+      if config.constructor is Object
+        if config.fileMatch
+          @handles = config.fileMatch
+        if config.fileTransform
+          @transformPath = config.fileTransform
+      else
+        # deprecated functionality
+        @handles = config
 
   handles: /\.static\.(?:hbs|handlebars)$/
 

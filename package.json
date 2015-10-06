@@ -9,7 +9,7 @@
     "jade",
     "html"
   ],
-  "version": "1.0.0",
+  "version": "1.1.0",
   "homepage": "https://github.com/bmatcuk/html-brunch-static",
   "license": "MIT",
   "repository": {
@@ -17,7 +17,7 @@
     "url": "bmatcuk/html-brunch-static"
   },
   "scripts": {
-    "prepublish": "brunch build",
+    "prepublish": "brunch build -P",
     "start": "brunch watch",
     "test": "mocha"
   },
