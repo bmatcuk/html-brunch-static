@@ -102,7 +102,7 @@ title: html-brunch-static's awesome test page
 _options:
   layout: app/layouts/main.static.jade
   partials:
-    - app/partials/greetings.html
+    - app/partials/greetings.static.hbs
 ---
 {{>greetings}}
 
@@ -111,11 +111,13 @@ This is **html-brunch-static's** super awesome test page.
 
 Everything between the `---`'s is the front matter. Here, I've chosen to write my front matter in [YAML](http://yaml.org/), but I could have also written it in JSON. This whole block is referred to as the _context_ of this file.
 
-In this example, We can see that this file wants to use a layout (`app/layouts/main.static.jade`) and includes one partial view (`app/partials/greetings.html`). All partial views that your file uses must be declared in the front matter so that html-brunch-static knows to load them. This also illustrates another powerful feature of html-brunch-static: layouts and partials can be written in any templating language that html-brunch-static has a processor for, and they don't need to match. This file is written in markdown, the layout in jade, and the partial is a boring html file (but could have been anything). Neat!
+In this example, We can see that this file wants to use a layout (`app/layouts/main.static.jade`) and includes one partial view (`app/partials/greetings.static.hbs`). All partial views that your file uses must be declared in the front matter so that html-brunch-static knows to load them. This also illustrates another powerful feature of html-brunch-static: layouts and partials can be written in any templating language that html-brunch-static has a processor for, and they don't need to match. This file is written in markdown, the layout in jade, and the partial is handlebars file. Neat!
 
-What's that `{{>greetings}}` thing all about? Well, after html-brunch-static converts your file to html, it runs the file through [handlebars](http://handlebarsjs.com/) to allow your files to use the context to do some cool things. Here, `{{>...}}` is the handlebars way of saying "use the partial called greetings". Since we declared that we're using the `app/partials/greetings.html` partial in our front matter, it will be loaded and inserted into your file here. Note that the name of the partial is equal to the basename of the file, without the extension (so `app/partials/greetings.html` becomes `greetings`).
+What's that `{{>greetings}}` thing all about? Well, after html-brunch-static converts your file to html, it runs the file through [handlebars](http://handlebarsjs.com/) to allow your files to use the context to do some cool things. Here, `{{>...}}` is the handlebars way of saying "use the partial called greetings". Since we declared that we're using the `app/partials/greetings.static.hbs` partial in our front matter, it will be loaded and inserted into your file here.
 
-Ok, so what does our partial look like? I give you `app/partials/greetings.html`. It doesn't need the `.static.` in its filename since it isn't being processed by anything:
+Note that your partial files must match the `fileMatch` rule for the processor that will handle the file. This means, by default, you'll need to name the file with `.static.ext`. html-brunch-static gives you multiple ways to reference your partial based on the filename though: for example, `app/partials/greetings.static.hbs` can be referenced as `{{>greetings.static.hbs}}`, `{{>greetings.static}}`, or `{{>greetings}}`.
+
+Ok, so what does our partial look like? I give you `app/partials/greetings.static.hbs`:
 
 ```html
 <h1>Welcome to {{title}}</h1>
@@ -135,6 +137,8 @@ html
 ```
 
 The _context_ of our page bubbles up to our layout, so our title is still available. If our layout included some front matter of its own, it could override the title. The content of our page is available to the layout with the `{{content}}`. That "pipe" (`|`) in front of `{{content}}` is just [jade](http://jade-lang.com/)'s way of saying that everything after it should just be included on the page verbatim.
+
+Note that, like partials, layout files must match the `fileMatch` rule for the processor that will handle the file. This means, by default, you'll need to name the file with `.static.ext`.
 
 Alright, let's take a quick look at our `package.json`:
 
@@ -162,6 +166,8 @@ exports.config =
     static:
       processors: [
         require('html-brunch-static') {
+          handlebars:
+            enableProcessor: true
           processors: [
             require('marked-brunch-static')()
             require('jade-brunch-static')(pretty: true)

@@ -64,13 +64,25 @@ Partial = (function() {
   };
 
   Partial.prototype.templateName = function() {
-    return path.basename(this.filename, path.extname(this.filename));
+    return path.basename(this.filename);
+  };
+
+  Partial.prototype.registerPartial = function(hbs) {
+    var ext, name, results;
+    name = this.templateName();
+    hbs.registerPartial(name, this.compiledTemplate);
+    results = [];
+    while ((ext = path.extname(name)).length > 0) {
+      name = path.basename(name, ext);
+      results.push(hbs.registerPartial(name, this.compiledTemplate));
+    }
+    return results;
   };
 
   Partial.prototype.compile = function(htmlBrunchStatic, hbs, callback) {
     var err, processor;
     if (this.compiledTemplate) {
-      hbs.registerPartial(this.templateName(), this.compiledTemplate);
+      this.registerPartial(hbs);
       callback(null, this.compiledTemplate, this.compilerDependencies);
       return;
     }
@@ -87,7 +99,7 @@ Partial = (function() {
           }
           _this.compiledTemplate = content;
           _this.compilerDependencies = dependencies;
-          hbs.registerPartial(_this.templateName(), content);
+          _this.registerPartial(hbs);
           return callback(null, content, dependencies);
         };
       })(this));

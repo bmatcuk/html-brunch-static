@@ -9,11 +9,18 @@ class Partial
     @dependencies = @dependencies.concat partial.dependencies
 
   templateName: ->
-    path.basename @filename, path.extname @filename
+    path.basename @filename
+
+  registerPartial: (hbs) ->
+    name = do @templateName
+    hbs.registerPartial name, @compiledTemplate
+    while (ext = path.extname(name)).length > 0
+      name = path.basename name, ext
+      hbs.registerPartial name, @compiledTemplate
 
   compile: (htmlBrunchStatic, hbs, callback) ->
     if @compiledTemplate
-      hbs.registerPartial @templateName(), @compiledTemplate
+      @registerPartial hbs
       callback null, @compiledTemplate, @compilerDependencies
       return
 
@@ -27,7 +34,7 @@ class Partial
 
         @compiledTemplate = content
         @compilerDependencies = dependencies
-        hbs.registerPartial @templateName(), content
+        @registerPartial hbs
         callback null, content, dependencies
     catch err
       callback err
