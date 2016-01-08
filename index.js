@@ -258,7 +258,7 @@ TemplateLoader = (function() {
     this.cache = {};
   }
 
-  TemplateLoader.prototype.load = function(filename, data, defaultContext) {
+  TemplateLoader.prototype.load = function(filename, data, defaultContext, content) {
     var context, file, i, layout, len, options, partial, ref, template;
     if (this.cache[filename]) {
       return this.cache[filename];
@@ -278,6 +278,9 @@ TemplateLoader = (function() {
     delete context._content;
     delete context._options;
     template = new Template(filename, template, context, options);
+    if (content) {
+      template.setContent(content);
+    }
     this.cache[filename] = template;
     if (options != null ? options.partials : void 0) {
       ref = options.partials;
@@ -291,11 +294,10 @@ TemplateLoader = (function() {
       }
     }
     if (options != null ? options.layout : void 0) {
-      layout = this.load(options.layout);
+      layout = this.load(options.layout, null, null, template);
       if (layout instanceof Error) {
         return layout;
       }
-      layout.setContent(template);
       return layout;
     }
     return template;

@@ -2,7 +2,7 @@ class TemplateLoader
   constructor: ->
     @cache = {}
 
-  load: (filename, data, defaultContext) ->
+  load: (filename, data, defaultContext, content) ->
     return @cache[filename] if @cache[filename]
 
     # parse the front matter
@@ -17,6 +17,7 @@ class TemplateLoader
     delete context._content
     delete context._options
     template = new Template filename, template, context, options
+    template.setContent content if content
     @cache[filename] = template
 
     # load partials
@@ -28,9 +29,8 @@ class TemplateLoader
 
     # if there's a layout, load that
     if options?.layout
-      layout = @load options.layout
+      layout = @load options.layout, null, null, template
       return layout if layout instanceof Error
-      layout.setContent template
       return layout
     return template
 
