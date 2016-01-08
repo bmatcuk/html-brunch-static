@@ -8,6 +8,9 @@ class HtmlBrunchStatic
     if @handlebarsOptions?.enableProcessor
       @processors.push new HandlebarsBrunchStatic @handlebarsOptions.enableProcessor
       delete @handlebarsOptions.enableProcessor
+    if @handlebarsOptions?.helpers
+      @handlebarsHelpers = @handlebarsOptions.helpers
+      delete @handlebarsHelpers.helpers
 
   handles: (filename) ->
     @getProcessor(filename) isnt null

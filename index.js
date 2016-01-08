@@ -189,6 +189,9 @@ Template = (function() {
   Template.prototype.compile = function(htmlBrunchStatic, callback) {
     var hbs, run;
     hbs = handlebars.create();
+    if (htmlBrunchStatic.handlebarsHelpers != null) {
+      hbs.registerHelper(htmlBrunchStatic.handlebarsHelpers);
+    }
     run = (function(_this) {
       return function() {
         return _this.compilePartials(htmlBrunchStatic, hbs, function(err) {
@@ -338,7 +341,7 @@ var HtmlBrunchStatic;
 
 HtmlBrunchStatic = (function() {
   function HtmlBrunchStatic(config) {
-    var ref;
+    var ref, ref1;
     this.processors = (config != null ? config.processors : void 0) || [];
     this.defaultContext = config != null ? config.defaultContext : void 0;
     this.partials = (config != null ? config.partials : void 0) || /partials?/;
@@ -347,6 +350,10 @@ HtmlBrunchStatic = (function() {
     if ((ref = this.handlebarsOptions) != null ? ref.enableProcessor : void 0) {
       this.processors.push(new HandlebarsBrunchStatic(this.handlebarsOptions.enableProcessor));
       delete this.handlebarsOptions.enableProcessor;
+    }
+    if ((ref1 = this.handlebarsOptions) != null ? ref1.helpers : void 0) {
+      this.handlebarsHelpers = this.handlebarsOptions.helpers;
+      delete this.handlebarsHelpers.helpers;
     }
   }
 

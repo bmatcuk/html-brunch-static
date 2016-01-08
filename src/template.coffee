@@ -43,6 +43,7 @@ class Template
 
   compile: (htmlBrunchStatic, callback) ->
     hbs = do handlebars.create
+    hbs.registerHelper htmlBrunchStatic.handlebarsHelpers if htmlBrunchStatic.handlebarsHelpers?
     run = =>
       @compilePartials htmlBrunchStatic, hbs, (err) =>
         if err

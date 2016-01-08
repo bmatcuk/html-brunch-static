@@ -39,6 +39,7 @@ exports.config =
           layouts: ...
           handlebars: {
             enableProcessor: ...
+            helpers: { ... }
             ...
           }
         }
@@ -58,11 +59,14 @@ exports.config =
   > Like _partials_ above, _layouts_ is an [anymatch](https://github.com/es128/anymatch) that will be used to determine what files are [layouts](#layouts). It may also be a string with globs, a regex, or a function that takes a filename and returns true/false. The default setting will match any filename that includes the word "layout" (or "layouts") anywhere in the path, for example: `app/layouts/whatever.ext`.
 
 * **handlebars** _(default: `null`)_
-  > Default options for handlebars (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)). These options, with the exception of _enableProcessor_ (see below), are passed verbatim to handlebars and can be overridden in the front matter ([see below](#context-layouts-and-partials)).
+  > Default options for handlebars (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)). These options, with the exception of _enableProcessor_ and _helpers_ (see below), are passed verbatim to handlebars and can be overridden in the front matter ([see below](#context-layouts-and-partials)).
   >
   > * **enableProcessor** _(default: `false`)_
   >
   >   > _enableProcessor_ may either be true or an object containing objects to pass to the handlebars processor. Either way will enable the built-in support for handlebar files. See below for the options available.
+  >
+  > * **helpers** _(default: `null`)_
+  >   > _helpers_ can be used to specify custom handlebars helpers. This option should be a hash where the keys are the names of the helpers and the values are functions. This hash is passed, verbatim, to `Handlebars.registerHelper()` (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)).
 
 The following options are available if you enable the built-in handlebars processor:
 
