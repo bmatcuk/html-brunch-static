@@ -11,6 +11,7 @@ class HtmlBrunchStatic
     if @handlebarsOptions?.helpers
       @handlebarsHelpers = @handlebarsOptions.helpers
       delete @handlebarsHelpers.helpers
+    @minify = config?.minify or false
 
   handles: (filename) ->
     @getProcessor(filename) isnt null
@@ -48,6 +49,12 @@ class HtmlBrunchStatic
         if err
           callback err
           return
+
+        if @minify
+          if @minify is true
+            content = minify content
+          else
+            content = minify content, @minify
 
         result =
           filename: @transformPath filename

@@ -1,3 +1,4 @@
+minify = require('html-minifier').minify
 yaml = require 'yaml-front-matter'
 handlebars = require 'handlebars'
 anymatch = require 'anymatch'

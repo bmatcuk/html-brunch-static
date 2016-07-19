@@ -42,6 +42,7 @@ exports.config =
             helpers: { ... }
             ...
           }
+          minify: ...
         }
       ]
 ```
@@ -67,6 +68,9 @@ exports.config =
   >
   > * **helpers** _(default: `null`)_
   >   > _helpers_ can be used to specify custom handlebars helpers. This option should be a hash where the keys are the names of the helpers and the values are functions. This hash is passed, verbatim, to `Handlebars.registerHelper()` (see [handlebars.js documentation](http://handlebarsjs.com/reference.html)).
+
+* **minify** _(default: `false`)_
+  > Minify the resulting html using [html-minifier](https://github.com/kangax/html-minifier). To enable, set this value to `true` to use the default options, or set to a hash of options that will be passed directly to html-minifier. See html-minifier's documentation for a list of valid options and their defaults.
 
 The following options are available if you enable the built-in handlebars processor:
 

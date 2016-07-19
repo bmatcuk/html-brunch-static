@@ -1,4 +1,6 @@
-var _, anymatch, handlebars, path, yaml;
+var _, anymatch, handlebars, minify, path, yaml;
+
+minify = require('html-minifier').minify;
 
 yaml = require('yaml-front-matter');
 
@@ -357,6 +359,7 @@ HtmlBrunchStatic = (function() {
       this.handlebarsHelpers = this.handlebarsOptions.helpers;
       delete this.handlebarsHelpers.helpers;
     }
+    this.minify = (config != null ? config.minify : void 0) || false;
   }
 
   HtmlBrunchStatic.prototype.handles = function(filename) {
@@ -414,6 +417,14 @@ HtmlBrunchStatic = (function() {
           if (err) {
             callback(err);
             return;
+          }
+          if (_this.minify) {
+            if (_this.minify === true) {
+              console.log(_this.minify);
+              content = minify(content);
+            } else {
+              content = minify(content, _this.minify);
+            }
           }
           result = {
             filename: _this.transformPath(filename),
