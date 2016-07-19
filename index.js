@@ -420,7 +420,6 @@ HtmlBrunchStatic = (function() {
           }
           if (_this.minify) {
             if (_this.minify === true) {
-              console.log(_this.minify);
               content = minify(content);
             } else {
               content = minify(content, _this.minify);
