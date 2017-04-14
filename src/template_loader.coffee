@@ -29,7 +29,7 @@ class TemplateLoader
 
     # if there's a layout, load that
     if options?.layout
-      layout = @load options.layout, null, null, template
+      layout = @load options.layout, null, defaultContext, template
       return layout if layout instanceof Error
       return layout
     return template

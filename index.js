@@ -82,7 +82,7 @@ Partial = (function() {
   };
 
   Partial.prototype.compile = function(htmlBrunchStatic, hbs, callback) {
-    var err, processor;
+    var err, error, processor;
     if (this.compiledTemplate) {
       this.registerPartial(hbs);
       callback(null, this.compiledTemplate, this.compilerDependencies);
@@ -105,8 +105,8 @@ Partial = (function() {
           return callback(null, content, dependencies);
         };
       })(this));
-    } catch (_error) {
-      err = _error;
+    } catch (error) {
+      err = error;
       return callback(err);
     }
   };
@@ -197,7 +197,7 @@ Template = (function() {
     run = (function(_this) {
       return function() {
         return _this.compilePartials(htmlBrunchStatic, hbs, function(err) {
-          var processor;
+          var error, processor;
           if (err) {
             callback(err);
             return;
@@ -208,7 +208,7 @@ Template = (function() {
           }
           try {
             return processor.compile(_this.template, _this.filename, _this.options, function(err, content, dependencies) {
-              var hbsOptions, ref, result, template;
+              var error, hbsOptions, ref, result, template;
               if (err) {
                 callback(err);
                 return;
@@ -221,13 +221,13 @@ Template = (function() {
                 template = hbs.compile(content, hbsOptions);
                 result = template(_this.context);
                 return callback(null, result);
-              } catch (_error) {
-                err = _error;
+              } catch (error) {
+                err = error;
                 return callback(err);
               }
             });
-          } catch (_error) {
-            err = _error;
+          } catch (error) {
+            err = error;
             return callback(err);
           }
         });
@@ -296,7 +296,7 @@ TemplateLoader = (function() {
       }
     }
     if (options != null ? options.layout : void 0) {
-      layout = this.load(options.layout, null, null, template);
+      layout = this.load(options.layout, null, defaultContext, template);
       if (layout instanceof Error) {
         return layout;
       }
@@ -399,7 +399,7 @@ HtmlBrunchStatic = (function() {
   };
 
   HtmlBrunchStatic.prototype.compile = function(data, filename, callback) {
-    var err, loader, template;
+    var err, error, loader, template;
     if (anymatch(this.partials, filename) || anymatch(this.layouts, filename)) {
       callback();
       return;
@@ -432,8 +432,8 @@ HtmlBrunchStatic = (function() {
           return callback(null, [result], template.dependencies);
         };
       })(this));
-    } catch (_error) {
-      err = _error;
+    } catch (error) {
+      err = error;
       return callback(err);
     }
   };
