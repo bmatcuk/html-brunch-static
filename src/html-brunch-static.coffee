@@ -36,6 +36,7 @@ class HtmlBrunchStatic
   compile: (data, filename, callback) ->
     if anymatch(@partials, filename) or anymatch(@layouts, filename)
       # don't output partials and layouts
+      log "Skipping #{filename}"
       do callback
       return
 

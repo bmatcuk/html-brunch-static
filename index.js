@@ -1,4 +1,4 @@
-var _, anymatch, handlebars, minify, path, yaml;
+var _, anymatch, handlebars, log, minify, path, yaml;
 
 minify = require('html-minifier').minify;
 
@@ -10,151 +10,34 @@ anymatch = require('anymatch');
 
 path = require('path');
 
+log = require('util').debuglog('htmlbrunch');
+
 _ = {
   merge: require('lodash.merge')
 };
 
-var HandlebarsBrunchStatic;
+var BasePartial;
 
-HandlebarsBrunchStatic = (function() {
-  function HandlebarsBrunchStatic(config) {
-    if (config.constructor !== Boolean) {
-      if (config.constructor === Object) {
-        if (config.fileMatch) {
-          this.handles = config.fileMatch;
-        }
-        if (config.fileTransform) {
-          this.transformPath = config.fileTransform;
-        }
-      } else {
-        this.handles = config;
-      }
-    }
-  }
-
-  HandlebarsBrunchStatic.prototype.handles = /\.static\.(?:hbs|handlebars)$/;
-
-  HandlebarsBrunchStatic.prototype.transformPath = function(filename) {
-    return filename.replace(/\.static\.\w+$/, '.html');
-  };
-
-  HandlebarsBrunchStatic.prototype.compile = function(data, filename, options, callback) {
-    return callback(null, data);
-  };
-
-  return HandlebarsBrunchStatic;
-
-})();
-
-var Partial;
-
-Partial = (function() {
-  function Partial(filename, template, context, options) {
+BasePartial = (function() {
+  function BasePartial(filename, template, context, options) {
     var ref;
     this.filename = filename;
     this.template = template;
     this.context = context;
     this.options = options;
-    this.dependencies = ((ref = this.options) != null ? ref.partials : void 0) || [];
-    this.compilerDependencies = null;
-    this.partials = [];
-  }
-
-  Partial.prototype.addPartial = function(partial) {
-    this.partials.push(partial);
-    return this.dependencies = this.dependencies.concat(partial.dependencies);
-  };
-
-  Partial.prototype.templateName = function() {
-    return path.basename(this.filename);
-  };
-
-  Partial.prototype.registerPartial = function(hbs) {
-    var ext, name, results;
-    name = this.templateName();
-    hbs.registerPartial(name, this.compiledTemplate);
-    results = [];
-    while ((ext = path.extname(name)).length > 0) {
-      name = path.basename(name, ext);
-      results.push(hbs.registerPartial(name, this.compiledTemplate));
-    }
-    return results;
-  };
-
-  Partial.prototype.compile = function(htmlBrunchStatic, hbs, callback) {
-    var err, error, processor;
-    if (this.compiledTemplate) {
-      this.registerPartial(hbs);
-      callback(null, this.compiledTemplate, this.compilerDependencies);
-      return;
-    }
-    processor = htmlBrunchStatic.getProcessor(this.filename);
-    if (!processor) {
-      processor = PassthruProcessor;
-    }
-    try {
-      return processor.compile(this.template, this.filename, this.options, (function(_this) {
-        return function(err, content, dependencies) {
-          if (err) {
-            callback(err);
-            return;
-          }
-          _this.compiledTemplate = content;
-          _this.compilerDependencies = dependencies;
-          _this.registerPartial(hbs);
-          return callback(null, content, dependencies);
-        };
-      })(this));
-    } catch (error) {
-      err = error;
-      return callback(err);
-    }
-  };
-
-  return Partial;
-
-})();
-
-var PassthruProcessor;
-
-PassthruProcessor = {
-  compile: function(data, filename, options, callback) {
-    return callback(null, data);
-  }
-};
-
-var Template;
-
-Template = (function() {
-  function Template(filename, template1, context, options) {
-    var ref, ref1;
-    this.filename = filename;
-    this.template = template1;
-    this.context = context;
-    this.options = options;
     this.dependencies = [];
-    if ((ref = this.options) != null ? ref.layout : void 0) {
-      this.dependencies.push(this.options.layout);
-    }
-    if ((ref1 = this.options) != null ? ref1.partials : void 0) {
+    if ((ref = this.options) != null ? ref.partials : void 0) {
       this.dependencies = this.dependencies.concat(this.options.partials);
     }
     this.partials = [];
     this.partialsCompiled = false;
   }
 
-  Template.prototype.addPartial = function(partial) {
-    this.partials.push(partial);
-    return this.dependencies = this.dependencies.concat(partial.dependencies);
+  BasePartial.prototype.addPartial = function(partial) {
+    return this.partials.push(partial);
   };
 
-  Template.prototype.setContent = function(template) {
-    this.content = template;
-    this.context = _.merge({}, template.context, this.context);
-    return this.dependencies = this.dependencies.concat(template.dependencies);
-  };
-
-  Template.prototype.compilePartials = function(htmlBrunchStatic, hbs, callback) {
+  BasePartial.prototype.compilePartials = function(htmlBrunchStatic, hbs, callback) {
     var count, done, i, len, partial, ref, results;
     if (this.partialsCompiled || this.partials.length === 0) {
       callback();
@@ -188,8 +71,144 @@ Template = (function() {
     return results;
   };
 
+  return BasePartial;
+
+})();
+
+var HandlebarsBrunchStatic;
+
+HandlebarsBrunchStatic = (function() {
+  function HandlebarsBrunchStatic(config) {
+    if (config.constructor !== Boolean) {
+      if (config.constructor === Object) {
+        if (config.fileMatch) {
+          this.handles = config.fileMatch;
+        }
+        if (config.fileTransform) {
+          this.transformPath = config.fileTransform;
+        }
+      } else {
+        this.handles = config;
+      }
+    }
+  }
+
+  HandlebarsBrunchStatic.prototype.handles = /\.static\.(?:hbs|handlebars)$/;
+
+  HandlebarsBrunchStatic.prototype.transformPath = function(filename) {
+    return filename.replace(/\.static\.\w+$/, '.html');
+  };
+
+  HandlebarsBrunchStatic.prototype.compile = function(data, filename, options, callback) {
+    return callback(null, data);
+  };
+
+  return HandlebarsBrunchStatic;
+
+})();
+
+var Partial,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Partial = (function(superClass) {
+  extend(Partial, superClass);
+
+  function Partial() {
+    return Partial.__super__.constructor.apply(this, arguments);
+  }
+
+  Partial.prototype.templateName = function() {
+    return path.basename(this.filename);
+  };
+
+  Partial.prototype.registerPartial = function(hbs) {
+    var ext, name, results;
+    name = this.templateName();
+    hbs.registerPartial(name, this.compiledPartial);
+    results = [];
+    while ((ext = path.extname(name)).length > 0) {
+      name = path.basename(name, ext);
+      results.push(hbs.registerPartial(name, this.compiledPartial));
+    }
+    return results;
+  };
+
+  Partial.prototype.compile = function(htmlBrunchStatic, hbs, callback) {
+    log("COMPILING PARTIAL " + this.filename);
+    if (this.compiledPartial) {
+      this.registerPartial(hbs);
+      callback(null, this.compiledPartial, this.dependencies);
+      return;
+    }
+    return this.compilePartials(htmlBrunchStatic, hbs, (function(_this) {
+      return function(err) {
+        var processor;
+        if (err) {
+          callback(err);
+          return;
+        }
+        processor = htmlBrunchStatic.getProcessor(_this.filename);
+        if (!processor) {
+          processor = PassthruProcessor;
+        }
+        try {
+          return processor.compile(_this.template, _this.filename, _this.options, function(err, content, dependencies) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            if (dependencies && dependencies.constructor === Array) {
+              _this.dependencies = _this.dependencies.concat(dependencies);
+            }
+            _this.compiledPartial = content;
+            _this.registerPartial(hbs);
+            return callback(null, content, _this.dependencies);
+          });
+        } catch (error) {
+          err = error;
+          return callback(err);
+        }
+      };
+    })(this));
+  };
+
+  return Partial;
+
+})(BasePartial);
+
+var PassthruProcessor;
+
+PassthruProcessor = {
+  compile: function(data, filename, options, callback) {
+    return callback(null, data);
+  }
+};
+
+var Template,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
+
+Template = (function(superClass) {
+  extend(Template, superClass);
+
+  function Template(filename, template, context, options) {
+    var ref;
+    Template.__super__.constructor.call(this, filename, template, context, options);
+    if ((ref = this.options) != null ? ref.layout : void 0) {
+      this.dependencies.push(this.options.layout);
+    }
+  }
+
+  Template.prototype.setContent = function(template) {
+    this.content = template;
+    this.context = _.merge({}, template.context, this.context);
+    return this.dependencies = this.dependencies.concat(template.dependencies);
+  };
+
   Template.prototype.compile = function(htmlBrunchStatic, callback) {
     var hbs, run;
+    log("COMPILING TEMPLATE " + this.filename);
     hbs = handlebars.create();
     if (htmlBrunchStatic.handlebarsHelpers != null) {
       hbs.registerHelper(htmlBrunchStatic.handlebarsHelpers);
@@ -197,7 +216,7 @@ Template = (function() {
     run = (function(_this) {
       return function() {
         return _this.compilePartials(htmlBrunchStatic, hbs, function(err) {
-          var error, processor;
+          var processor;
           if (err) {
             callback(err);
             return;
@@ -208,7 +227,7 @@ Template = (function() {
           }
           try {
             return processor.compile(_this.template, _this.filename, _this.options, function(err, content, dependencies) {
-              var error, hbsOptions, ref, result, template;
+              var hbsOptions, ref, result, template;
               if (err) {
                 callback(err);
                 return;
@@ -251,7 +270,7 @@ Template = (function() {
 
   return Template;
 
-})();
+})(BasePartial);
 
 var TemplateLoader;
 
@@ -262,6 +281,7 @@ TemplateLoader = (function() {
 
   TemplateLoader.prototype.load = function(filename, data, defaultContext, content) {
     var context, file, i, layout, len, options, partial, ref, template;
+    log("LOAD " + filename);
     if (this.cache[filename]) {
       return this.cache[filename];
     }
@@ -307,6 +327,7 @@ TemplateLoader = (function() {
 
   TemplateLoader.prototype.loadPartial = function(filename) {
     var child, context, file, i, len, options, partial, ref, ref1, template;
+    log("LOAD PARTIAL " + filename);
     if (this.cache[filename]) {
       return this.cache[filename];
     }
@@ -399,8 +420,9 @@ HtmlBrunchStatic = (function() {
   };
 
   HtmlBrunchStatic.prototype.compile = function(data, filename, callback) {
-    var err, error, loader, template;
+    var err, loader, template;
     if (anymatch(this.partials, filename) || anymatch(this.layouts, filename)) {
+      log("Skipping " + filename);
       callback();
       return;
     }

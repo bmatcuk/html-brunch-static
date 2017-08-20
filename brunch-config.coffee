@@ -20,3 +20,5 @@ exports.config =
     production:
       optimize: false
 
+  npm: enabled: false
+

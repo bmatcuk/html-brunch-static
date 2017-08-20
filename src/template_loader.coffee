@@ -3,6 +3,7 @@ class TemplateLoader
     @cache = {}
 
   load: (filename, data, defaultContext, content) ->
+    log "LOAD #{filename}"
     return @cache[filename] if @cache[filename]
 
     # parse the front matter
@@ -35,6 +36,7 @@ class TemplateLoader
     return template
 
   loadPartial: (filename) ->
+    log "LOAD PARTIAL #{filename}"
     return @cache[filename] if @cache[filename]
 
     # parse front matter
