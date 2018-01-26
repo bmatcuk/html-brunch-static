@@ -216,7 +216,7 @@ Template = (function(superClass) {
     run = (function(_this) {
       return function() {
         return _this.compilePartials(htmlBrunchStatic, hbs, function(err) {
-          var processor;
+          var afterCompile, processor;
           if (err) {
             callback(err);
             return;
@@ -226,7 +226,7 @@ Template = (function(superClass) {
             processor = PassthruProcessor;
           }
           try {
-            return processor.compile(_this.template, _this.filename, _this.options, function(err, content, dependencies) {
+            afterCompile = function(err, content, dependencies) {
               var hbsOptions, ref, result, template;
               if (err) {
                 callback(err);
@@ -244,7 +244,12 @@ Template = (function(superClass) {
                 err = error;
                 return callback(err);
               }
-            });
+            };
+            if (processor.acceptsContext) {
+              return processor.compile(_this.template, _this.filename, _this.options, _this.context, afterCompile);
+            } else {
+              return processor.compile(_this.template, _this.filename, _this.options, afterCompile);
+            }
           } catch (error) {
             err = error;
             return callback(err);

@@ -234,6 +234,7 @@ var MyHtmlProcessor = function(config) { ... };
 MyHtmlProcessor.prototype = {
   handles: ...,
   transformPath: function(filename) { ... },
+  acceptsContext: true/false,
   compile: function(data, filename, options, callback) { ... }
 };
 
@@ -255,3 +256,5 @@ module.exports = function(config) { return new MyHtmlProcessor(config); };
   >   * **data** is the html output of your processor.
   >   * **dependencies** is an array of dependencies that your processor has found for the file. If the file has dependencies on layouts and partial views, html-brunch-static already tracks those, but the language you are implementing in your processor might have some way of its own to include the content of other files. If this is the case, you should return those dependencies here so html-brunch-static can track them, too. Otherwise, you can just pass null.
 
+* **acceptsContext**
+  > If _acceptsContext_ is `true`, _compile_ will be called with one additional parameter before the callback: the [context](#context-layouts-and-partials). That makes the _compile_ function look like: `function(data, filename, options, context, callback)`. This might be useful if your processor has some way of using the context. For example, the [pug](https://github.com/bmatcuk/pug-brunch-static) processor exposes the context as local variables for use in the pug template.

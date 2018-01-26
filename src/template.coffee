@@ -26,7 +26,7 @@ class Template extends BasePartial
         processor = htmlBrunchStatic.getProcessor @filename
         processor = PassthruProcessor unless processor
         try
-          processor.compile @template, @filename, @options, (err, content, dependencies) =>
+          afterCompile = (err, content, dependencies) =>
             if err
               callback err
               return
@@ -43,6 +43,11 @@ class Template extends BasePartial
               callback null, result
             catch err
               callback err
+
+          if processor.acceptsContext
+            processor.compile @template, @filename, @options, @context, afterCompile
+          else
+            processor.compile @template, @filename, @options, afterCompile
         catch err
           callback err
 
