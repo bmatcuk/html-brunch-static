@@ -1,4 +1,4 @@
-var _, anymatch, handlebars, log, minify, path, yaml;
+var _, anymatch, fs, handlebars, log, minify, path, yaml;
 
 minify = require('html-minifier').minify;
 
@@ -12,14 +12,16 @@ path = require('path');
 
 log = require('util').debuglog('htmlbrunch');
 
+fs = require('fs');
+
 _ = {
   merge: require('lodash.merge')
 };
 
 var BasePartial;
 
-BasePartial = (function() {
-  function BasePartial(filename, template, context, options) {
+BasePartial = class BasePartial {
+  constructor(filename, template, context, options) {
     var ref;
     this.filename = filename;
     this.template = template;
@@ -33,35 +35,34 @@ BasePartial = (function() {
     this.partialsCompiled = false;
   }
 
-  BasePartial.prototype.addPartial = function(partial) {
+  addPartial(partial) {
     return this.partials.push(partial);
-  };
+  }
 
-  BasePartial.prototype.compilePartials = function(htmlBrunchStatic, hbs, callback) {
+  compilePartials(htmlBrunchStatic, hbs, callback) {
     var count, done, i, len, partial, ref, results;
     if (this.partialsCompiled || this.partials.length === 0) {
       callback();
       return;
     }
     count = this.partials.length;
-    done = (function(_this) {
-      return function(err, content, dependencies) {
-        if (err) {
-          count = -1;
-          callback(err);
-        }
-        if (count < 0) {
-          return;
-        }
-        if (dependencies && dependencies.constructor === Array) {
-          _this.dependencies = _this.dependencies.concat(dependencies);
-        }
-        if (--count === 0) {
-          _this.partialsCompiled = true;
-          return callback();
-        }
-      };
-    })(this);
+    done = (err, content, dependencies) => {
+      if (err) {
+        count = -1;
+        callback(err);
+      }
+      if (count < 0) {
+        return;
+      }
+      // partial's compiler may add some dependencies
+      if (dependencies && dependencies.constructor === Array) {
+        this.dependencies = this.dependencies.concat(dependencies);
+      }
+      if (--count === 0) {
+        this.partialsCompiled = true;
+        return callback();
+      }
+    };
     ref = this.partials;
     results = [];
     for (i = 0, len = ref.length; i < len; i++) {
@@ -69,60 +70,55 @@ BasePartial = (function() {
       results.push(partial.compile(htmlBrunchStatic, hbs, done));
     }
     return results;
-  };
+  }
 
-  return BasePartial;
-
-})();
+};
 
 var HandlebarsBrunchStatic;
 
 HandlebarsBrunchStatic = (function() {
-  function HandlebarsBrunchStatic(config) {
-    if (config.constructor !== Boolean) {
-      if (config.constructor === Object) {
-        if (config.fileMatch) {
-          this.handles = config.fileMatch;
+  class HandlebarsBrunchStatic {
+    constructor(config) {
+      if (config.constructor !== Boolean) {
+        if (config.constructor === Object) {
+          if (config.fileMatch) {
+            this.handles = config.fileMatch;
+          }
+          if (config.fileTransform) {
+            this.transformPath = config.fileTransform;
+          }
+        } else {
+          // deprecated functionality
+          this.handles = config;
         }
-        if (config.fileTransform) {
-          this.transformPath = config.fileTransform;
-        }
-      } else {
-        this.handles = config;
       }
     }
-  }
+
+    transformPath(filename) {
+      return filename.replace(/\.static\.\w+$/, '.html');
+    }
+
+    compile(data, filename, options, callback) {
+      // do nothing because html-brunch-static processes through handlebars already
+      return callback(null, data);
+    }
+
+  };
 
   HandlebarsBrunchStatic.prototype.handles = /\.static\.(?:hbs|handlebars)$/;
 
-  HandlebarsBrunchStatic.prototype.transformPath = function(filename) {
-    return filename.replace(/\.static\.\w+$/, '.html');
-  };
-
-  HandlebarsBrunchStatic.prototype.compile = function(data, filename, options, callback) {
-    return callback(null, data);
-  };
-
   return HandlebarsBrunchStatic;
 
-})();
+}).call(this);
 
-var Partial,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
+var Partial;
 
-Partial = (function(superClass) {
-  extend(Partial, superClass);
-
-  function Partial() {
-    return Partial.__super__.constructor.apply(this, arguments);
+Partial = class Partial extends BasePartial {
+  templateName() {
+    return path.basename(this.filename);
   }
 
-  Partial.prototype.templateName = function() {
-    return path.basename(this.filename);
-  };
-
-  Partial.prototype.registerPartial = function(hbs) {
+  registerPartial(hbs) {
     var ext, name, results;
     name = this.templateName();
     hbs.registerPartial(name, this.compiledPartial);
@@ -132,50 +128,52 @@ Partial = (function(superClass) {
       results.push(hbs.registerPartial(name, this.compiledPartial));
     }
     return results;
-  };
+  }
 
-  Partial.prototype.compile = function(htmlBrunchStatic, hbs, callback) {
-    log("COMPILING PARTIAL " + this.filename);
+  compile(htmlBrunchStatic, hbs, callback) {
+    log(`COMPILING PARTIAL ${this.filename}`);
     if (this.compiledPartial) {
       this.registerPartial(hbs);
       callback(null, this.compiledPartial, this.dependencies);
       return;
     }
-    return this.compilePartials(htmlBrunchStatic, hbs, (function(_this) {
-      return function(err) {
-        var processor;
-        if (err) {
-          callback(err);
-          return;
+    return this.compilePartials(htmlBrunchStatic, hbs, (err) => {
+      var afterCompile, processor;
+      if (err) {
+        callback(err);
+        return;
+      }
+      processor = htmlBrunchStatic.getProcessor(this.filename);
+      if (!processor) {
+        processor = PassthruProcessor;
+      }
+      try {
+        afterCompile = (err, content, dependencies) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          // compiler may add dependencies
+          if (dependencies && dependencies.constructor === Array) {
+            this.dependencies = this.dependencies.concat(dependencies);
+          }
+          this.compiledPartial = content;
+          this.registerPartial(hbs);
+          return callback(null, content, this.dependencies);
+        };
+        if (processor.acceptsContext) {
+          return processor.compile(this.template, this.filename, this.options, {}, afterCompile);
+        } else {
+          return processor.compile(this.template, this.filename, this.options, afterCompile);
         }
-        processor = htmlBrunchStatic.getProcessor(_this.filename);
-        if (!processor) {
-          processor = PassthruProcessor;
-        }
-        try {
-          return processor.compile(_this.template, _this.filename, _this.options, function(err, content, dependencies) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            if (dependencies && dependencies.constructor === Array) {
-              _this.dependencies = _this.dependencies.concat(dependencies);
-            }
-            _this.compiledPartial = content;
-            _this.registerPartial(hbs);
-            return callback(null, content, _this.dependencies);
-          });
-        } catch (error) {
-          err = error;
-          return callback(err);
-        }
-      };
-    })(this));
-  };
+      } catch (error) {
+        err = error;
+        return callback(err);
+      }
+    });
+  }
 
-  return Partial;
-
-})(BasePartial);
+};
 
 var PassthruProcessor;
 
@@ -185,78 +183,77 @@ PassthruProcessor = {
   }
 };
 
-var Template,
-  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  hasProp = {}.hasOwnProperty;
+var Template;
 
-Template = (function(superClass) {
-  extend(Template, superClass);
-
-  function Template(filename, template, context, options) {
+Template = class Template extends BasePartial {
+  constructor(filename, template, context, options) {
     var ref;
-    Template.__super__.constructor.call(this, filename, template, context, options);
+    super(filename, template, context, options);
     if ((ref = this.options) != null ? ref.layout : void 0) {
       this.dependencies.push(this.options.layout);
     }
   }
 
-  Template.prototype.setContent = function(template) {
+  // layouts have a content template
+  setContent(template) {
     this.content = template;
+    // merge context
     this.context = _.merge({}, template.context, this.context);
+    // merge dependencies
     return this.dependencies = this.dependencies.concat(template.dependencies);
-  };
+  }
 
-  Template.prototype.compile = function(htmlBrunchStatic, callback) {
+  compile(htmlBrunchStatic, callback) {
     var hbs, run;
-    log("COMPILING TEMPLATE " + this.filename);
+    log(`COMPILING TEMPLATE ${this.filename}`);
     hbs = handlebars.create();
     if (htmlBrunchStatic.handlebarsHelpers != null) {
       hbs.registerHelper(htmlBrunchStatic.handlebarsHelpers);
     }
-    run = (function(_this) {
-      return function() {
-        return _this.compilePartials(htmlBrunchStatic, hbs, function(err) {
-          var afterCompile, processor;
-          if (err) {
-            callback(err);
-            return;
-          }
-          processor = htmlBrunchStatic.getProcessor(_this.filename);
-          if (!processor) {
-            processor = PassthruProcessor;
-          }
-          try {
-            afterCompile = function(err, content, dependencies) {
-              var hbsOptions, ref, result, template;
-              if (err) {
-                callback(err);
-                return;
-              }
-              if (dependencies && dependencies.constructor === Array) {
-                _this.dependencies = _this.dependencies.concat(dependencies);
-              }
-              hbsOptions = _.merge({}, htmlBrunchStatic.handlebarsOptions, (ref = _this.options) != null ? ref.handlebars : void 0);
-              try {
-                template = hbs.compile(content, hbsOptions);
-                result = template(_this.context);
-                return callback(null, result);
-              } catch (error) {
-                err = error;
-                return callback(err);
-              }
-            };
-            if (processor.acceptsContext) {
-              return processor.compile(_this.template, _this.filename, _this.options, _this.context, afterCompile);
-            } else {
-              return processor.compile(_this.template, _this.filename, _this.options, afterCompile);
+    run = () => {
+      return this.compilePartials(htmlBrunchStatic, hbs, (err) => {
+        var afterCompile, processor;
+        if (err) {
+          callback(err);
+          return;
+        }
+        processor = htmlBrunchStatic.getProcessor(this.filename);
+        if (!processor) {
+          processor = PassthruProcessor;
+        }
+        try {
+          afterCompile = (err, content, dependencies) => {
+            var hbsOptions, ref, result, template;
+            if (err) {
+              callback(err);
+              return;
             }
-          } catch (error) {
-            err = error;
-            return callback(err);
+            // compiler may add dependencies
+            if (dependencies && dependencies.constructor === Array) {
+              this.dependencies = this.dependencies.concat(dependencies);
+            }
+            // process through handlebars
+            hbsOptions = _.merge({}, htmlBrunchStatic.handlebarsOptions, (ref = this.options) != null ? ref.handlebars : void 0);
+            try {
+              template = hbs.compile(content, hbsOptions);
+              result = template(this.context);
+              return callback(null, result);
+            } catch (error) {
+              err = error;
+              return callback(err);
+            }
+          };
+          if (processor.acceptsContext) {
+            return processor.compile(this.template, this.filename, this.options, this.context, afterCompile);
+          } else {
+            return processor.compile(this.template, this.filename, this.options, afterCompile);
           }
-        });
-      };
-    })(this);
+        } catch (error) {
+          err = error;
+          return callback(err);
+        }
+      });
+    };
     if (this.content) {
       return this.content.compile(htmlBrunchStatic, function(err, content) {
         if (err) {
@@ -271,44 +268,49 @@ Template = (function(superClass) {
     } else {
       return run();
     }
-  };
+  }
 
-  return Template;
-
-})(BasePartial);
+};
 
 var TemplateLoader;
 
-TemplateLoader = (function() {
-  function TemplateLoader() {
+TemplateLoader = class TemplateLoader {
+  constructor() {
     this.cache = {};
   }
 
-  TemplateLoader.prototype.load = function(filename, data, defaultContext, content) {
+  load(filename, data, defaultContext, content) {
     var context, file, i, layout, len, options, partial, ref, template;
-    log("LOAD " + filename);
+    log(`LOAD ${filename}`);
     if (this.cache[filename]) {
       return this.cache[filename];
     }
-    context = yaml.loadFront(data || filename, '_content');
+    // read file, if no data
+    if (!data) {
+      data = fs.readFileSync(filename);
+    }
+    // parse the front matter
+    context = yaml.loadFront(data);
     if (context instanceof Error) {
       return context;
     }
     if (context === false) {
-      return new Error("Could not parse " + filename + ".");
+      return new Error(`Could not parse ${filename}.`);
     }
     if (defaultContext) {
+      // pull out content and settings
       context = _.merge({}, defaultContext, context);
     }
-    template = context._content;
+    template = context.__content;
     options = context._options;
-    delete context._content;
+    delete context.__content;
     delete context._options;
     template = new Template(filename, template, context, options);
     if (content) {
       template.setContent(content);
     }
     this.cache[filename] = template;
+    // load partials
     if (options != null ? options.partials : void 0) {
       ref = options.partials;
       for (i = 0, len = ref.length; i < len; i++) {
@@ -320,6 +322,7 @@ TemplateLoader = (function() {
         template.addPartial(partial);
       }
     }
+    // if there's a layout, load that
     if (options != null ? options.layout : void 0) {
       layout = this.load(options.layout, null, defaultContext, template);
       if (layout instanceof Error) {
@@ -328,27 +331,31 @@ TemplateLoader = (function() {
       return layout;
     }
     return template;
-  };
+  }
 
-  TemplateLoader.prototype.loadPartial = function(filename) {
-    var child, context, file, i, len, options, partial, ref, ref1, template;
-    log("LOAD PARTIAL " + filename);
+  loadPartial(filename) {
+    var child, context, data, file, i, len, options, partial, ref, ref1, template;
+    log(`LOAD PARTIAL ${filename}`);
     if (this.cache[filename]) {
       return this.cache[filename];
     }
-    context = yaml.loadFront(filename, '_content');
+    // parse front matter
+    data = fs.readFileSync(filename);
+    context = yaml.loadFront(data);
     if (context instanceof Error) {
       return context;
     }
     if (context === false) {
-      return new Error("Could not parse " + filename + ".");
+      return new Error(`Could not parse ${filename}.`);
     }
-    template = context._content;
+    // create partial
+    template = context.__content;
     options = context._options;
-    delete context._content;
+    delete context.__content;
     delete context._options;
     partial = new Partial(filename, template, context, options);
     this.cache[filename] = partial;
+    // load child partials
     if ((ref = partial.options) != null ? ref.partials : void 0) {
       ref1 = partial.options.partials;
       for (i = 0, len = ref1.length; i < len; i++) {
@@ -361,16 +368,14 @@ TemplateLoader = (function() {
       }
     }
     return partial;
-  };
+  }
 
-  return TemplateLoader;
-
-})();
+};
 
 var HtmlBrunchStatic;
 
-HtmlBrunchStatic = (function() {
-  function HtmlBrunchStatic(config) {
+HtmlBrunchStatic = class HtmlBrunchStatic {
+  constructor(config) {
     var ref, ref1;
     this.processors = (config != null ? config.processors : void 0) || [];
     this.defaultContext = config != null ? config.defaultContext : void 0;
@@ -388,11 +393,11 @@ HtmlBrunchStatic = (function() {
     this.minify = (config != null ? config.minify : void 0) || false;
   }
 
-  HtmlBrunchStatic.prototype.handles = function(filename) {
+  handles(filename) {
     return this.getProcessor(filename) !== null;
-  };
+  }
 
-  HtmlBrunchStatic.prototype.getProcessor = function(filename) {
+  getProcessor(filename) {
     var map, processorIdx;
     map = function(p) {
       if (p.handles.constructor === Function) {
@@ -409,9 +414,9 @@ HtmlBrunchStatic = (function() {
     } else {
       return this.processors[processorIdx];
     }
-  };
+  }
 
-  HtmlBrunchStatic.prototype.transformPath = function(filename) {
+  transformPath(filename) {
     var processor;
     processor = this.getProcessor(filename);
     if (!processor) {
@@ -422,12 +427,13 @@ HtmlBrunchStatic = (function() {
     } else {
       return filename.replace(new RegExp(path.extname(filename) + '$'), '.html');
     }
-  };
+  }
 
-  HtmlBrunchStatic.prototype.compile = function(data, filename, callback) {
+  compile(data, filename, callback) {
     var err, loader, template;
     if (anymatch(this.partials, filename) || anymatch(this.layouts, filename)) {
-      log("Skipping " + filename);
+      // don't output partials and layouts
+      log(`Skipping ${filename}`);
       callback();
       return;
     }
@@ -438,36 +444,32 @@ HtmlBrunchStatic = (function() {
       return;
     }
     try {
-      return template.compile(this, (function(_this) {
-        return function(err, content) {
-          var result;
-          if (err) {
-            callback(err);
-            return;
+      return template.compile(this, (err, content) => {
+        var result;
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (this.minify) {
+          if (this.minify === true) {
+            content = minify(content);
+          } else {
+            content = minify(content, this.minify);
           }
-          if (_this.minify) {
-            if (_this.minify === true) {
-              content = minify(content);
-            } else {
-              content = minify(content, _this.minify);
-            }
-          }
-          result = {
-            filename: _this.transformPath(filename),
-            content: content
-          };
-          return callback(null, [result], template.dependencies);
+        }
+        result = {
+          filename: this.transformPath(filename),
+          content: content
         };
-      })(this));
+        return callback(null, [result], template.dependencies);
+      });
     } catch (error) {
       err = error;
       return callback(err);
     }
-  };
+  }
 
-  return HtmlBrunchStatic;
-
-})();
+};
 
 module.exports = function(config) {
   return new HtmlBrunchStatic(config);

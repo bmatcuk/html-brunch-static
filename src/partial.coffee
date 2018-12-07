@@ -24,7 +24,7 @@ class Partial extends BasePartial
       processor = htmlBrunchStatic.getProcessor @filename
       processor = PassthruProcessor unless processor
       try
-        processor.compile @template, @filename, @options, (err, content, dependencies) =>
+        afterCompile = (err, content, dependencies) =>
           if err
             callback err
             return
@@ -36,6 +36,11 @@ class Partial extends BasePartial
           @compiledPartial = content
           @registerPartial hbs
           callback null, content, @dependencies
+
+        if processor.acceptsContext
+          processor.compile @template, @filename, @options, {}, afterCompile
+        else
+          processor.compile @template, @filename, @options, afterCompile
       catch err
         callback err
 

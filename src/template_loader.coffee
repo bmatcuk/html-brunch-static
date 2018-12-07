@@ -6,16 +6,20 @@ class TemplateLoader
     log "LOAD #{filename}"
     return @cache[filename] if @cache[filename]
 
+    # read file, if no data
+    unless data
+      data = fs.readFileSync filename
+
     # parse the front matter
-    context = yaml.loadFront(data or filename, '_content')
+    context = yaml.loadFront data
     return context if context instanceof Error
     return new Error("Could not parse #{filename}.") if context is false
 
     # pull out content and settings
     context = _.merge {}, defaultContext, context if defaultContext
-    template = context._content
+    template = context.__content
     options = context._options
-    delete context._content
+    delete context.__content
     delete context._options
     template = new Template filename, template, context, options
     template.setContent content if content
@@ -40,14 +44,15 @@ class TemplateLoader
     return @cache[filename] if @cache[filename]
 
     # parse front matter
-    context = yaml.loadFront filename, '_content'
+    data = fs.readFileSync filename
+    context = yaml.loadFront data
     return context if context instanceof Error
     return new Error("Could not parse #{filename}.") if context is false
 
     # create partial
-    template = context._content
+    template = context.__content
     options = context._options
-    delete context._content
+    delete context.__content
     delete context._options
     partial = new Partial filename, template, context, options
     @cache[filename] = partial
