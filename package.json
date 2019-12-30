@@ -9,7 +9,7 @@
     "jade",
     "html"
   ],
-  "version": "1.4.1",
+  "version": "1.4.2",
   "homepage": "https://github.com/bmatcuk/html-brunch-static",
   "license": "MIT",
   "repository": {
@@ -21,11 +21,11 @@
     "start": "brunch watch"
   },
   "dependencies": {
-    "anymatch": "^2.0.0",
-    "handlebars": "^4.0.12",
+    "anymatch": "^3.1.1",
+    "handlebars": "^4.3.0",
     "html-minifier": "^3.5.21",
-    "lodash.merge": "^4.6.1",
-    "yaml-front-matter": "^4.0.0"
+    "lodash.merge": "^4.6.2",
+    "yaml-front-matter": "^4.1.0"
   },
   "devDependencies": {
     "brunch": "~2.10.17",
