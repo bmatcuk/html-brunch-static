@@ -93,6 +93,7 @@ The value of _partials_ and _layouts_ may be the same if you want to put them al
 Below are the currently available processors for html-brunch-static. If you'd like for your processor to be included in this list, [create an issue](https://github.com/bmatcuk/brunch-static/issues/new) with your project's URL and a description.
 
 * Markdown: [marked-brunch-static](https://github.com/bmatcuk/marked-brunch-static)
+* Nunjucks: [njk-brunch-static](https://github.com/bmatcuk/njk-brunch-static)
 * Pug: [pug-brunch-static](https://github.com/bmatcuk/pug-brunch-static)
 * Jade: [jade-brunch-static](https://github.com/bmatcuk/jade-brunch-static)
 * Handlebars: built-in (see the [handlebars.enableProcessor option](#configuration) above)
